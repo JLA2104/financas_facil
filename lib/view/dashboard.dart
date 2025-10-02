@@ -3,6 +3,7 @@ import 'cadastro_despesa.dart';
 import 'cadastro_entrada.dart';
 import 'motivo_exclusao.dart';
 import '../data/movimentacoes_list.dart' as mov_list;
+import 'grafico_despesas.dart';
 
 class DashboardPage extends StatefulWidget {
   @override
@@ -80,6 +81,13 @@ class _DashboardPageState extends State<DashboardPage> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Gráfico de despesas',
+            icon: Icon(Icons.pie_chart),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => GraficoDespesasPage()));
+            },
+          ),
           IconButton(
             tooltip: 'Logout',
             icon: Icon(Icons.logout),
