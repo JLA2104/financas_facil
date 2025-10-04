@@ -1,3 +1,4 @@
+import 'package:device_preview/device_preview.dart';
 import 'package:financas_facil/view/cadastro.dart';
 import 'package:financas_facil/view/dashboard.dart';
 import 'package:financas_facil/view/recuperar.dart';
@@ -6,9 +7,14 @@ import 'package:flutter/material.dart';
 import "view/login.dart";
 
 void main() {
-  runApp(MyApp());
-}
-
+  runApp(
+    DevicePreview(
+      enabled: true, // Mudar para true para ativar o Device Preview
+      builder: (context) => MyApp(), // Wrap your app
+    
+  );  //DevicePreview
+  }
+},
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
