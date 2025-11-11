@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../controllers/user_controller.dart';
 
 class RecuperarSenhaPage extends StatefulWidget {
   @override
@@ -42,13 +43,24 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
 
             // Botão Enviar
             ElevatedButton(
-              onPressed: () {
-                // Simula envio de e-mail: apenas mostra um toast e retorna para a tela de login (/)
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('E-mail de recuperação enviado')));
-                // Pequeno delay para o usuário ver o toast
-                Future.delayed(Duration(milliseconds: 700), () {
+              onPressed: () async {
+                final email = _emailController.text.trim();
+                final controller = UserController();
+
+                if (email.isEmpty || !email.contains('@')) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Informe um e-mail válido')));
+                  return;
+                }
+
+                try {
+                  // envia e-mail de recuperação via FirebaseAuth
+                  await controller.sendPasswordResetEmail(email);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('E-mail de recuperação enviado')));
+                  await Future.delayed(Duration(milliseconds: 700));
                   Navigator.pushReplacementNamed(context, '/');
-                });
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao recuperar senha: $e')));
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: corPrincipal,

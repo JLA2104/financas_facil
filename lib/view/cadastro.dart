@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/users_list.dart';
+import '../controllers/user_controller.dart';
 
 class CadastroPage extends StatefulWidget {
   @override
@@ -95,12 +95,13 @@ class _CadastroPageState extends State<CadastroPage> {
 
               // Botão Cadastrar
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   final nome = _nomeController.text.trim();
                   final email = _emailController.text.trim();
                   final telefone = _telefoneController.text.trim();
                   final senha = _senhaController.text;
                   final confirmar = _confirmarSenhaController.text;
+                  final controller = UserController();
 
                   if (nome.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Informe o nome')));
@@ -119,14 +120,20 @@ class _CadastroPageState extends State<CadastroPage> {
                     return;
                   }
 
-                  if (findByEmail(email) != null) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('E-mail já cadastrado')));
-                    return;
-                  }
+                  try {
+                    // Registra com FirebaseAuth e cria o documento no Firestore
+                    await controller.registerWithEmailAndPassword(
+                      nome: nome,
+                      email: email,
+                      senha: senha,
+                      telefone: telefone.isEmpty ? null : telefone,
+                    );
 
-                  addUser({'nome': nome, 'email': email, 'telefone': telefone, 'senha': senha});
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cadastro realizado com sucesso')));
-                  Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cadastro realizado com sucesso')));
+                    Navigator.pop(context);
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao cadastrar: $e')));
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: corPrincipal,

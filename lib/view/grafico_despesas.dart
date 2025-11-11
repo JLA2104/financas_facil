@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
-import '../data/movimentacoes_list.dart' as mov_list;
+import 'package:firebase_auth/firebase_auth.dart';
+import '../controllers/movimentacao_controller.dart';
+import '../models/movimentacao.dart';
 
 class GraficoDespesasPage extends StatelessWidget {
-  const GraficoDespesasPage({Key? key}) : super(key: key);
+  GraficoDespesasPage({Key? key}) : super(key: key);
 
   // calcula soma de despesas por categoria (valores negativos)
-  Map<String, double> _calcularPorCategoria() {
+  final MovimentacaoController _controller = MovimentacaoController();
+
+  Map<String, double> _calcularPorCategoriaFromList(List<Movimentacao> list) {
     final Map<String, double> mapa = {};
-    for (final m in mov_list.movimentacoes) {
-      final valor = (m['valor'] as double);
+    for (final m in list) {
+      final valor = m.valor;
       if (valor >= 0) continue; // só despesas
-      final cat = (m['categoria'] as String?) ?? 'Outros';
+      final cat = m.categoria.isNotEmpty ? m.categoria : 'Outros';
       mapa[cat] = (mapa[cat] ?? 0) + valor.abs();
     }
     return mapa;
@@ -19,8 +23,13 @@ class GraficoDespesasPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dados = _calcularPorCategoria();
-    final total = dados.values.fold(0.0, (s, v) => s + v);
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Despesas por Categoria')),
+        body: Center(child: Text('Usuário não autenticado')),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -28,34 +37,45 @@ class GraficoDespesasPage extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            if (dados.isEmpty)
-              Center(child: Text('Nenhuma despesa registrada'))
-            else ...[
-              SizedBox(
-                height: 240,
-                child: CustomPaint(
-                  painter: _PieChartPainter(dados),
-                  child: Container(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // legenda
-              Expanded(
-                child: ListView(
-                  children: dados.entries.map((e) {
-                    final pct = total > 0 ? (e.value / total) * 100 : 0.0;
-                    return ListTile(
-                      leading: CircleAvatar(backgroundColor: _PieChartPainter.colorFor(e.key)),
-                      title: Text(e.key),
-                      trailing: Text('${e.value.toStringAsFixed(2).replaceAll('.', ',')} (${pct.toStringAsFixed(1)}%)'),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ]
-          ],
+        child: StreamBuilder<List<Movimentacao>>(
+          stream: _controller.obterStreamDoUsuario(uid),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) return Center(child: Text('Erro: ${snapshot.error}'));
+            if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+
+            final dados = _calcularPorCategoriaFromList(snapshot.data!);
+            final total = dados.values.fold(0.0, (s, v) => s + v);
+
+            return Column(
+              children: [
+                if (dados.isEmpty)
+                  Center(child: Text('Nenhuma despesa registrada'))
+                else ...[
+                  SizedBox(
+                    height: 240,
+                    child: CustomPaint(
+                      painter: _PieChartPainter(dados),
+                      child: Container(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // legenda
+                  Expanded(
+                    child: ListView(
+                      children: dados.entries.map((e) {
+                        final pct = total > 0 ? (e.value / total) * 100 : 0.0;
+                        return ListTile(
+                          leading: CircleAvatar(backgroundColor: _PieChartPainter.colorFor(e.key)),
+                          title: Text(e.key),
+                          trailing: Text('${e.value.toStringAsFixed(2).replaceAll('.', ',')} (${pct.toStringAsFixed(1)}%)'),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ]
+              ],
+            );
+          },
         ),
       ),
     );

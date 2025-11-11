@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/users_list.dart';
+import '../controllers/user_controller.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -53,21 +53,23 @@ class _LoginPageState extends State<LoginPage> {
 
             // Botão Entrar
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final email = _usernameController.text.trim();
                 final senha = _passwordController.text;
+                final controller = UserController();
 
                 if (email.isEmpty || senha.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Preencha e-mail e senha')));
                   return;
                 }
 
-                final ok = validateCredentials(email, senha);
-                if (ok) {
+                // realiza login com FirebaseAuth
+                try {
+                  await controller.signInWithEmailAndPassword(email, senha);
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login realizado com sucesso')));
                   Navigator.pushReplacementNamed(context, '/dashboard');
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Credenciais inválidas')));
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao efetuar login: $e')));
                 }
               },
               style: ElevatedButton.styleFrom(

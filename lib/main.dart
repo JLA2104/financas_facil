@@ -1,11 +1,17 @@
+import 'package:financas_facil/firebase_options.dart';
 import 'package:financas_facil/view/cadastro.dart';
 import 'package:financas_facil/view/dashboard.dart';
 import 'package:financas_facil/view/recuperar.dart';
 import 'package:financas_facil/view/sobre.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import "view/login.dart";
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-void main() {
   runApp(MyApp());
 }
 
