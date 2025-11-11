@@ -69,7 +69,13 @@ class _LoginPageState extends State<LoginPage> {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login realizado com sucesso')));
                   Navigator.pushReplacementNamed(context, '/dashboard');
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao efetuar login: $e')));
+                  var msg = 'Erro ao efetuar login: $e';
+                  if (e.toString().contains("FirebaseAuthException: invalid-email")) {
+                    msg = 'E-mail inválido.';
+                  } else if (e.toString().contains("FirebaseAuthException: invalid-credential")) {
+                    msg = 'Credenciais inválidas.';
+                  }
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
                 }
               },
               style: ElevatedButton.styleFrom(

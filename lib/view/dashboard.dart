@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import '../controllers/movimentacao_controller.dart';
 import '../models/movimentacao.dart';
 import 'cadastro_despesa.dart';
 import 'cadastro_entrada.dart';
 import 'motivo_exclusao.dart';
 import 'grafico_despesas.dart';
+import 'perfil_usuario.dart';
+import 'busca_movimentacoes.dart';
 
 class DashboardPage extends StatefulWidget {
   @override
@@ -20,22 +26,79 @@ class _DashboardPageState extends State<DashboardPage> {
 
   // Saldo será calculado a partir do snapshot das movimentações
 
-  //  Formatando a data manualmente como dd/mm/yyyy
-  String formatarData(DateTime data) {
-    String dia = data.day.toString().padLeft(2, '0');
-    String mes = data.month.toString().padLeft(2, '0');
-    String ano = data.year.toString();
-    return '$dia/$mes/$ano';
+  @override
+  void initState() {
+    super.initState();
+    _initializeDateFormatting();
+    _fetchDollarRate();
   }
 
-  //  Formatando valores manualmente como "R$ 1000.00"
+  Future<void> _initializeDateFormatting() async {
+    try {
+      await initializeDateFormatting('pt_BR');
+    } catch (e) {
+      // A inicialização pode falhar em alguns casos, mas continuamos
+      print('Erro ao inicializar formatação de data: $e');
+    }
+  }
+
+  //  Formatando a data com a API de formatação
+  String formatarData(DateTime data) {
+    final DateFormat formatador = DateFormat('dd/MM/yyyy', 'pt_BR');
+    return formatador.format(data);
+  }
+
+  //  Formatando valores com separador de milhar e casas decimais
   String formatarValor(double valor) {
-    String valorFormatado = valor.abs().toStringAsFixed(2).replaceAll('.', ',');
-    return (valor < 0 ? '- ' : '') + 'R\$ $valorFormatado';
+    final NumberFormat formatador = NumberFormat.currency(
+      locale: 'pt_BR',
+      symbol: 'R\$ ',
+      decimalDigits: 2,
+    );
+    String valorFormatado = formatador.format(valor.abs());
+    return (valor < 0 ? '- ' : '') + valorFormatado;
   }
 
   Color corValor(double valor) {
     return valor >= 0 ? Colors.green : Colors.red;
+  }
+
+  // Cotação do dólar (BRL por USD)
+  double? _dolarCotacao;
+  bool _dolarLoading = true;
+  String? _dolarError;
+
+  Future<void> _fetchDollarRate() async {
+    setState(() {
+      _dolarLoading = true;
+      _dolarError = null;
+    });
+
+    try {
+      final uri = Uri.parse('https://api.bcb.gov.br/dados/serie/bcdata.sgs.10813/dados/ultimos/1?formato=json');
+      final res = await http.get(uri).timeout(Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        final body = json.decode(res.body);
+        if (body is List && body.isNotEmpty) {
+          final item = body[0];
+          final valorStr = (item['valor'] ?? '').toString().replaceAll(',', '.');
+          final parsed = double.tryParse(valorStr);
+          if (parsed != null && parsed > 0) {
+            setState(() => _dolarCotacao = parsed);
+          } else {
+            setState(() => _dolarError = 'Resposta inválida');
+          }
+        } else {
+          setState(() => _dolarError = 'Resposta vazia');
+        }
+      } else {
+        setState(() => _dolarError = 'Erro HTTP: \\${res.statusCode}');
+      }
+    } catch (e) {
+      setState(() => _dolarError = e.toString());
+    } finally {
+      setState(() => _dolarLoading = false);
+    }
   }
 
   Future<void> _excluirMovimentacaoPorId(String id, String motivo) async {
@@ -106,6 +169,20 @@ class _DashboardPageState extends State<DashboardPage> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Buscar',
+            icon: Icon(Icons.search),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => BuscaMovimentacoesPage()));
+            },
+          ),
+          IconButton(
+            tooltip: 'Perfil',
+            icon: Icon(Icons.person),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => PerfilUsuarioPage()));
+            },
+          ),
           IconButton(
             tooltip: 'Gráfico de despesas',
             icon: Icon(Icons.pie_chart),
@@ -182,13 +259,25 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                           SizedBox(height: 8),
                           Text(
-                            'R\$ ${saldo.toStringAsFixed(2).replaceAll('.', ',')}',
+                            formatarValor(saldo),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                          SizedBox(height: 8),
+                          // Mostrar saldo convertido para USD usando a cotação obtida
+                          if (_dolarLoading)
+                            Text('Carregando cotação...', style: TextStyle(color: Colors.white70))
+                          else if (_dolarError != null)
+                            Text('Cotação indisponível', style: TextStyle(color: Colors.white70))
+                          else if (_dolarCotacao != null && _dolarCotacao! > 0)
+                            Text(
+                              NumberFormat.currency(locale: 'en_US', symbol: 'US\$ ', decimalDigits: 2)
+                                  .format(saldo / _dolarCotacao!),
+                              style: TextStyle(color: Colors.white70, fontSize: 16),
+                            ),
                         ],
                       ),
                     ),

@@ -17,6 +17,20 @@ class _CadastroDespesaPageState extends State<CadastroDespesaPage> {
   DateTime _data = DateTime.now();
 
   @override
+  void initState() {
+    super.initState();
+    // Preenche os campos se for edição
+    if (widget.movimentacaoInicial != null) {
+      final m = widget.movimentacaoInicial!;
+      _nomeController.text = m['nome'] ?? '';
+      _categoriaController.text = m['categoria'] ?? '';
+      final v = m['valor'] as double? ?? 0.0;
+      _valorController.text = v.abs().toStringAsFixed(2);
+      _data = m['data'] ?? _data;
+    }
+  }
+
+  @override
   void dispose() {
     _nomeController.dispose();
     _categoriaController.dispose();
@@ -60,15 +74,6 @@ class _CadastroDespesaPageState extends State<CadastroDespesaPage> {
 
   @override
   Widget build(BuildContext context) {
-    // se vier uma movimentacao inicial (edição), preenche os campos
-    if (widget.movimentacaoInicial != null) {
-      final m = widget.movimentacaoInicial!;
-      _nomeController.text = m['nome'] ?? '';
-      _categoriaController.text = m['categoria'] ?? '';
-      final v = m['valor'] as double? ?? 0.0;
-      _valorController.text = v.abs().toStringAsFixed(2);
-      _data = m['data'] ?? _data;
-    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cadastro de Despesa'),

@@ -5,7 +5,7 @@ class UserModel {
   final String nome;
   final String email;
   final String? telefone;
-  final String? senha; // Preservado para leitura legacy; NÃO será salvo em novas gravações
+  final String? senha; // Opcional: não recomendado armazenar em texto puro
   final DateTime? criadoEm;
   final DateTime? atualizadoEm;
 
@@ -19,13 +19,12 @@ class UserModel {
     this.atualizadoEm,
   });
 
-  /// Converte para Map para persistir no Firestore.
-  /// NOTA: por segurança, não incluímos o campo `senha` ao salvar.
   Map<String, dynamic> toMap() {
     return {
       'nome': nome,
       'email': email,
-      if (telefone != null) 'telefone': telefone,
+      'telefone': telefone,
+      'senha': senha,
       'criadoEm': criadoEm ?? DateTime.now(),
       'atualizadoEm': atualizadoEm ?? DateTime.now(),
     };
@@ -37,7 +36,7 @@ class UserModel {
       nome: map['nome'] as String? ?? '',
       email: map['email'] as String? ?? '',
       telefone: map['telefone'] as String?,
-      senha: map['senha'] as String?, // pode existir em documentos antigos
+      senha: map['senha'] as String?,
       criadoEm: (map['criadoEm'] is Timestamp)
           ? (map['criadoEm'] as Timestamp).toDate()
           : (map['criadoEm'] as DateTime?),
