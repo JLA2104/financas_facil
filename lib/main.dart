@@ -12,7 +12,7 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(MyApp());
+runApp(DevicePreview(enabled: true, builder: (context) => MyApp()));
 }
 
 class MyApp extends StatelessWidget {
